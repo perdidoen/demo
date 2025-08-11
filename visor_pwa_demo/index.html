@@ -1,0 +1,89 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Manual 3D Papercraft – PWA</title>
+
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#d6c6a8"/>
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+
+  <!-- model-viewer -->
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
+  <style>
+    body{margin:0;background:url('assets/fondo_carton.jpg') repeat;font-family: system-ui, -apple-system, Segoe UI, Roboto, 'Noto Sans', sans-serif;color:#2b2b2b}
+    header{background:#fff8;backdrop-filter: blur(3px);padding:12px 16px;border-bottom:5px dashed #b89d6c;font-weight:800}
+    .bar{position:fixed;bottom:0;left:0;right:0;background:#fff8;padding:10px 8px;display:flex;gap:8px;justify-content:center;border-top:5px dashed #b89d6c}
+    button{background:#fff8dc;border:2px dashed #c2a878;padding:10px 14px;border-radius:12px;box-shadow:3px 3px 5px rgba(0,0,0,.18)}
+    button:hover{background:#f0e6d2}
+    #installPrompt{display:none;position:fixed;bottom:84px;left:50%;transform:translateX(-50%);background:white;border:2px dashed #c2a878;padding:10px 14px;border-radius:12px;box-shadow:3px 3px 12px rgba(0,0,0,.2)}
+  </style>
+</head>
+<body>
+<header>Manual 3D Papercraft – PWA (instalable)</header>
+
+<model-viewer id="viewer" src="assets/modelo_demo.glb" camera-controls style="width:100%;height:70vh;background:#faf3e0"></model-viewer>
+
+<div class="bar">
+  <button onclick="mostrarHasta(1)" title="Paso 1">Pieza 1</button>
+  <button onclick="mostrarHasta(2)" title="Paso 2">Pieza 2</button>
+  <button onclick="mostrarHasta(3)" title="Paso 3">Pieza 3</button>
+  <button onclick="mostrarHasta(4)" title="Paso 4">Pieza 4</button>
+  <button onclick="mostrarHasta(5)" title="Paso 5">Pieza 5</button>
+  <button onclick="resetCam()">Recentrar</button>
+</div>
+
+<div id="installPrompt">
+  <span>Instalar app</span>
+  <button id="btnInstall">Instalar</button>
+</div>
+
+<script>
+// Piezas progresivas
+const viewer = document.getElementById('viewer');
+let piezas = [];
+function walk(node){ if(node.name) piezas.push(node.name); (node.children||[]).forEach(walk); }
+function mostrarHasta(n){
+  if(!viewer.scene || !viewer.scene.model) return;
+  viewer.scene.model.traverse(node=>{
+    if(node.name && piezas.includes(node.name)){
+      const num = parseInt((node.name.match(/\d+/)||['0'])[0],10);
+      node.visible = num<=n;
+    }
+  });
+}
+function resetCam(){ viewer.cameraOrbit = 'auto auto auto'; }
+
+viewer.addEventListener('load', ()=>{
+  piezas = []; walk(viewer.scene.model); console.log('Piezas:', piezas);
+  mostrarHasta(1);
+});
+
+// PWA: registrar service worker
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js');
+  });
+}
+
+// PWA: instalación (A2HS)
+let deferredPrompt;
+window.addEventListener('beforeinstallprompt', (e)=>{
+  e.preventDefault();
+  deferredPrompt = e;
+  const box = document.getElementById('installPrompt');
+  const btn = document.getElementById('btnInstall');
+  box.style.display='block';
+  btn.onclick = async ()=>{
+    box.style.display='none';
+    deferredPrompt.prompt();
+    deferredPrompt = null;
+  };
+});
+</script>
+</body>
+</html>
